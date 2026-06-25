@@ -1,0 +1,66 @@
+package eu.kanade.tachiyomi.extension.id.doujindesu
+
+import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.source.model.*
+import eu.kanade.tachiyomi.source.online.ParsedHttpSource
+import okhttp3.Request
+import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
+
+class Doujindesu : ParsedHttpSource() {
+        override val name = "Doujindesu"
+            override val baseUrl = "https://doujin.desu.xxx" // Pastikan URL ini aktif
+                override val lang = "id"
+                    override val supportsLatest = true
+
+                        // Menggunakan Request.Builder yang lebih stabil
+                            override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/manga?page=$page", headers)
+                                
+                                    override fun popularMangaSelector() = "div.grid a"
+                                        
+                                            override fun popularMangaFromElement(element: Element) = SManga.create().apply {
+                                                        title = element.selectFirst("img")?.attr("alt") ?: "Unknown"
+                                                                thumbnail_url = element.selectFirst("img")?.attr("src")
+                                                                        setUrlWithoutDomain(element.attr("href"))
+                                            }
+
+                                                override fun mangaDetailsParse(document: Document) = SManga.create().apply {
+                                                            title = document.selectFirst("h1")?.text() ?: "" // Biasanya judul ada di h1
+                                                                    thumbnail_url = document.selectFirst("img.h-full.w-full.object-cover")?.attr("src")
+                                                }
+
+                                                    override fun chapterListSelector() = "div.flex.items-center.gap-2"
+                                                        
+                                                            override fun chapterFromElement(element: Element) = SChapter.create().apply {
+                                                                        name = element.selectFirst("h3")?.text() ?: "Chapter"
+                                                                                setUrlWithoutDomain(element.closest("a")?.attr("href") ?: "")
+                                                            }
+
+                                                                // Memperbaiki cara mengambil daftar halaman
+                                                                    override fun pageListParse(document: Document): List<Page> {
+                                                                                return document.select("img.w-full.h-auto.select-none").mapIndexed { i, el ->
+                                                                                            Page(i, "", el.attr("src"))
+                                                                                                    }
+                                                                    }
+
+                                                                        override fun imageUrlParse(document: Document): String = "" // Biasanya tidak terpakai di ParsedHttpSource tipe ini
+
+                                                                            override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/manga?page=$page", headers)
+                                                                                override fun latestUpdatesSelector() = popularMangaSelector()
+                                                                                    override fun latestUpdatesFromElement(element: Element) = popularMangaFromElement(element)
+                                                                                        
+                                                                                            override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request = 
+                                                                                                    GET("$baseUrl/?search=$query&page=$page", headers)
+                                                                                                        override fun searchMangaSelector() = popularMangaSelector()
+                                                                                                            override fun searchMangaFromElement(element: Element) = popularMangaFromElement(element)
+
+                                                                                                                override fun popularMangaNextPageSelector() = "a[rel=next]"
+                                                                                                                    override fun latestUpdatesNextPageSelector() = popularMangaNextPageSelector()
+                                                                                                                        override fun searchMangaNextPageSelector() = popularMangaNextPageSelector()
+}
+
+                                                                    }
+                                                            }
+                                                }
+                                            }
+}
